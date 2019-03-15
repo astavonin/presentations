@@ -1,0 +1,330 @@
+class: center, middle
+
+# Implicit and explicit dependencies
+### potential issues and best practices
+
+
+
+23 Jan 2018, Alexander Stavonin, alex@sysdev.me
+???
+this talk is about dependencies, first of all, dependencies between packages. Usually we import packages for it's components which we are using in our functions and I'll often use functions and interfaces for illustration. But in general all these things are very strictly dependent on each other.
+---
+
+# Dependencies types
+
+```go
+type MyCoolInterface interface{
+    DoWork()
+}
+```
+--
+### Explicit dependency
+
+```go
+func foo(i MyCoolInterface) {
+    i.DoWork()
+}
+```
+--
+### Implicit dependency
+
+```go
+func foo() {
+    i := intManager.GetMyCoolInterface()
+    i.DoWork()
+}
+```
+???
+- style is not idiomatic for Go program, but the goal here is illustration
+- These dependency types are valid for functions and packages
+- in case of explicit dependency our function (it could be not a function, but method defined on structure) accept interface explicitly as argument.
+- in case of implicit dependency, function still uses MyCoolInterface, but there is no clean way to tell if from function declaration
+---
+
+# Dependencies types, continue
+
+
+### Side effect dependency
+
+```go
+import (  
+    "image"
+    _ "image/gif"
+    _ "image/png"
+    _ "image/jpeg"
+)
+```
+--
+where `init()` call from `image` package has next content:
+
+```go
+func init() {  
+        image.RegisterFormat("png", pngHeader, Decode, DecodeConfig)
+}
+```
+???
+underscore import statements are very Go-specific dependency type where side-effect is the only goal for importing
+
+---
+
+# Object initialization order
+
+Example project structure:
+
+```sh
+    +->
+    | |
+    | +->A
+    | |  |
+    | |  +->libA.go
+    | |
+    | +->B
+    |    |
+    |    +->libB.go
+    |
+    +->main.go
+```
+--
+Where `libA` and `libB` have next content:
+
+```go
+var bVar = initVar()
+
+func initVar() bool {
+    fmt.Println("initVar A")
+    return false
+}
+func init() {
+    fmt.Println("init A")
+}
+```
+???
+before going deep with dependencies, I'd like to be sure we are on same page with object initialization order in Go
+This is side-effect illustration, real values doesn't matter.
+---
+
+## Object initialization order, continue
+
+Each package has strong initialization order:
+
+`import` -> `const` -> `var` -> `init()`
+
+
+```go
+package main
+
+import (
+    "fmt"
+    _ "github.com/astavonin/presentation/b"
+    _ "github.com/astavonin/presentation/a"
+)
+
+func main() {
+    fmt.Println("main")
+}
+```
+
+Output:
+
+```sh
+initVar B
+init B
+initVar A
+init A
+main
+```
+???
+on compare with C++, in Go-world we have guarantees on object initialization order.
+
+---
+
+# Object initialization order, summary
+
+```go
+package main
+
+import "fmt"
+
+var WhatIsThe = AnswerToUltimateQuestionOfLife()
+
+func AnswerToUltimateQuestionOfLife() int {
+    return 42
+}
+
+func init() {
+    WhatIsThe = 0
+}
+
+func main() {
+    if WhatIsThe != 42 {
+        fmt.Println("It's all a lie.")
+    }
+}
+```
+Output:
+
+```cmd
+> It's all a lie.
+```
+???
+Answer to the Ultimate Question of Life, the Universe, and Everything is 42
+
+---
+
+# Implicit dependencies issues
+
+- Global variables is main approach for implicit dependencies implementation.
+
+- It’s classical `Singleton` pattern with small improvements, but still:
+
+ - Dependencies hiding;
+
+ - Global state is implicitly available for everyone;
+
+ - Concurrency issues;
+
+ - initialization before `main()`.
+
+???
+I'll jump into implicit dependencies issue without explicit dependencies discussion as the only visible explicit dependency issue is verbose declaration style.
+
+- http://wiki.c2.com/?GlobalVariablesAreBad
+- https://stackoverflow.com/questions/137975/what-is-so-bad-about-singletons#
+---
+
+# Dependencies hiding
+
+Contract with **explicit** dependency on `BarInterface`
+
+```go
+func Foo(bar BarInterface)
+```
+
+--
+
+but with **implicit** dependency on `ShouldDo` function from `baz` package.
+
+```go
+{
+    if baz.ShouldDo() {
+        bar.DoSothening()
+    }
+}
+```
+
+
+- You cannot see real dependencies from `Foo` function contract;
+- You can only guess who, when and why changes state for `baz.ShouldDo()`.
+
+---
+
+# Concurrency issues
+
+```go
+type GlobalData struct {
+    ValueA string
+    ValueMutex sync.Mutex
+}
+
+var Data GlobalData
+
+func foo() {
+    Data.ValueMutex.Lock()
+    defer Data.ValueMutex.Unlock()
+
+    Data.ValueA = "new value"
+}
+```
+???
+Cheap concurrency is one of the most important and widely used Go features. That's why global data structure often requires locks for same modifications.
+
+--
+```go
+type DataAccessor interface {
+    SetValueA(newA string)
+    ...
+}
+
+func (dg *GlobalData) SetValueA(newA string) {
+    Data.ValueMutex.Lock()
+    defer Data.ValueMutex.Unlock()
+
+    Data.ValueA = newA
+}
+```
+???
+Locks could be hidden by structure authors but they are still issue in concurrent world.
+---
+
+# initialization before `main()`
+
+```go
+package conf
+
+type Configuration struct {
+    Timeout int
+    ...
+}
+var Config = initConfig()
+
+func initConfig() Configuration {
+    var conf Configuration, os.Open(...), json.Unmarshal(...), ...
+    return conf
+}
+```
+???
+very typical configuration initialization approach in Go program
+--
+```go
+package pkgA
+
+func Foo(/*c *conf.Configuration*/) {
+    timeout := conf.Config.Timeout
+    ...
+}
+```
+???
+Till now still Ok, no negative side-effects. We are initializing `Configuration` only once, so no even concurrency issue.
+--
+```go
+func init() {
+    timeout := conf.Config.Timeout
+    ...
+}
+```
+???
+It's to late to get timeout from `Foo`, lets read this value from `init()`
+
+sines this moment you cannot change your `Config` initializations way any more, because you have external implicit dependency in `init()` call. Let's say you cannot pass path to configuration as a command line argument 
+---
+
+# Making life easier
+
+#### Limit global objects and `init()` call usages:
+
+    - Do not export static objects, make all private;
+    - Do not export functions with the only goal static objects manipulation;
+    - Limit calls to static objects with your component submodules.
+```sh
+    +->
+    | |
+    | +->A
+    |    +->libA.go
+    |    |
+    |    +->B
+    |       +->libA.go
+    |
+    +->main.go
+```
+
+
+#### Use linters for global usages auto-detection:
+
+    - https://github.com/leighmcculloch/gochecknoglobals
+
+???
+Go is not C++, where to ban global static objects is a right way to save you time, but some limitations are still reasonable.
+
+---
+
+# THE END :)
