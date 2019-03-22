@@ -86,7 +86,7 @@ There are 2 main types of interaction in concurrent applications:
     
     - Communicating sequential processes (CSP);
     
-    - Actors.
+    - Actors model.
 
 ---
 # Concurrent interactions and communication
@@ -104,10 +104,113 @@ There are 2 main types of interaction in concurrent applications:
 # Concurrent interactions and communication
 ### Communicating sequential processes (CSP)
 
+- CSP was first described in a 1978 paper by Tony Hoare and significantly improved in 1985;
+
+- Go is one of multiple languages which support CSP.
+    - CSP is also implemented in Rust, Clojure, OCaml, etc.
+    
+- `Channel`s as a cross process/thread communication way is core component of CSP.
+
+- All modern CSP implementations much more secure then Shared memory.
+
+- Deadlocks are still possible as any Goroutine may have multiple Channels.
 
 ---
 # Concurrent interactions and communication
 ### Actors
+
+- Very similar to CSP, but...
+
+    - CSP processes are anonymous, while actors have identities.
+    
+    - CSP uses explicit channels for message passing, whereas actor systems transmit messages to named destination actors.
+
+    - *Invalid for Go CSP implementation statement*: CSP message-passing fundamentally involves a rendezvous between the processes involved in sending and receiving the message, i.e. the sender cannot transmit a message until the receiver is ready to accept it.
+
+- Some languages has Actors model implementation out of the box like Erlang.
+
+- Or has very famous implementation like AKKA from Scala.
+
+---
+# What is Active Object?
+
+The idea of Active Object is based on Actors model and was initially described in Pattern-Oriented Software Architecture (POSA book, 1996).
+
+---
+#Communication interface
+
+Each request should have unique type. Same idea as function call.
+
+```go
+type requestCommand int
+
+const(
+	genNum requestCommand = iota
+	runCmd
+)
+```
+
+--
+Request is not only command type, but also command data (if any) and a way to push response back.
+```go
+type request struct {
+	cmd requestCommand
+	data interface {}
+	out chan response
+}
+```
+
+--
+Processor able to generate any type of response. In luck of metaprogramming, `interface {}` is a good option.
+```go
+type response interface {}
+```
+
+---
+# Processing a request
+### Main processor
+
+```go
+func processRequest(req request)  {
+	switch req.cmd {
+	case genNum:
+		req.out <- rand.Intn(100)
+	case runCmd:
+		go doExec(req)
+	}
+}
+```
+where:
+    - `req.cmd` is command type
+    - `req.out` is outcoming channel (a way to tell caller result)
+
+- fast command `genNum` should be executed "in place"
+
+- we need special handling for slow command `runCmd`
+
+---
+# Processing a request
+### Slow commands
+
+```go
+func doExec(req request) {
+	time.Sleep(1*time.Second)
+
+	cmd := req.data.(string)
+	out, err := exec.Command(cmd).Output()
+	if err != nil {
+		req.out <- err.Error()
+	} else {
+		req.out <- string(out)
+	}
+}
+```
+where:
+    - `Sleep` just for illustration proposes of delay.
+    - `exec.Command` is external command execution.
+    - `req.out` is outcoming channel (same as earlier).
+
+---
 
 ---
 # Questions and comments are welcome! :)

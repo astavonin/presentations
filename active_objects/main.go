@@ -22,22 +22,24 @@ type request struct {
 	out chan response
 }
 
+func doExec(req request) {
+	time.Sleep(1*time.Second)
+
+	cmd := req.data.(string)
+	out, err := exec.Command(cmd).Output()
+	if err != nil {
+		req.out <- err.Error()
+	} else {
+		req.out <- string(out)
+	}
+}
+
 func processRequest(req request)  {
 	switch req.cmd {
 	case genNum:
 		req.out <- rand.Intn(100)
 	case runCmd:
-		go func() {
-			time.Sleep(1*time.Second)
-
-			cmd := req.data.(string)
-			out, err := exec.Command(cmd).Output()
-			if err != nil {
-				req.out <- err.Error()
-			} else {
-				req.out <- string(out)
-			}
-		}()
+		go doExec(req)
 	}
 }
 
