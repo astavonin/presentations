@@ -34,13 +34,11 @@ type SomeStruct struct {
 	
     someMap map[int]string
     someArray []string
-    
-    ???
 }
 ```
 ---
 
-# Why this transformation is needed? (1/2)
+# Motivation (1/2)
 
 ### Races and deadlocks:
 
@@ -61,7 +59,7 @@ type SomeStruct struct {
     - `defer` helps a lot, but it works only in function scope, but not `if` or `for` scopes.
 
 ---
-# Why this transformation is needed? (2/2)
+# Motivation (2/2)
 
 ### Amdahl's law
 
@@ -76,7 +74,7 @@ where:
 Impact: if you can run in  parallel 25% of your code on 10 executors (threads) then **theoretically** achievable speedup is 3.077 and only 3.883 for 100 executors!
 
 ---
-# Concurrent interactions and communication
+# Concurrent interactions
 
 There are 2 main types of interaction in concurrent applications:
 
@@ -89,7 +87,7 @@ There are 2 main types of interaction in concurrent applications:
     - Actors model.
 
 ---
-# Concurrent interactions and communication
+# Concurrent interactions
 ### Shared memory
 
 - Most common way for cross process/thread interaction in concurrent world;
@@ -101,7 +99,7 @@ There are 2 main types of interaction in concurrent applications:
 - Error prone: deadlocks and races are very common for shared memory access.
 
 ---
-# Concurrent interactions and communication
+# Concurrent interactions
 ### Communicating sequential processes (CSP)
 
 - CSP was first described in a 1978 paper by Tony Hoare and significantly improved in 1985;
@@ -116,7 +114,7 @@ There are 2 main types of interaction in concurrent applications:
 - Deadlocks are still possible as any Goroutine may have multiple Channels.
 
 ---
-# Concurrent interactions and communication
+# Concurrent interactions
 ### Actors
 
 - Very similar to CSP, but...
@@ -135,6 +133,8 @@ There are 2 main types of interaction in concurrent applications:
 # What is Active Object?
 
 The idea of Active Object is based on Actors model and was initially described in Pattern-Oriented Software Architecture (POSA book, 1996).
+
+![](./ao.svg)
 
 ---
 #Communication interface
@@ -161,13 +161,13 @@ type request struct {
 ```
 
 --
-Processor able to generate any type of response. In luck of metaprogramming, `interface {}` is a good option.
+Processor is able to generate any type of response. In luck of metaprogramming, `interface {}` is a good option.
 ```go
 type response interface {}
 ```
 
 ---
-# Processing a request
+# Processing a request 1/3
 ### Main processor
 
 ```go
@@ -183,13 +183,11 @@ func processRequest(req request)  {
 where:
     - `req.cmd` is command type
     - `req.out` is outcoming channel (a way to tell caller result)
-
 - fast command `genNum` should be executed "in place"
-
 - we need special handling for slow command `runCmd`
 
 ---
-# Processing a request
+# Processing a request 2/3
 ### Slow commands
 
 ```go
@@ -211,6 +209,41 @@ where:
     - `req.out` is outcoming channel (same as earlier).
 
 ---
+# Processing a request 3/3
+## Event loop
 
+```go
+func eventLoop(done chan struct{}, inCh chan request) {
+	for {
+		select {
+		case req := <-inCh:
+			processRequest(req)
+		case <-done:
+			break
+		}
+	}
+}
+```
+where:
+    - `inCh` is an input channel. Input channel is the only way to interact with Processor.
+    - `done` signal for shutting processor down.
+
+---
+```go
+	done := make(chan struct{})
+	inCh := make(chan request, 10)
+
+	go eventLoop(done, inCh)
+```
+```go
+	resp := make(chan response, 1)
+
+	inCh <- request{
+		runCmd,
+		"ls",
+		resp,
+	}
+	fmt.Println(<-resp1)
+```
 ---
 # Questions and comments are welcome! :)
