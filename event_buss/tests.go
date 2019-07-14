@@ -7,6 +7,13 @@ import (
 
 type MyInt int
 
+type Foo struct {
+}
+
+func (f Foo) Boo() {
+	fmt.Println("Hi here!")
+}
+
 func kindVsType() {
 	var x MyInt = 42
 	var y int = 43
@@ -15,8 +22,12 @@ func kindVsType() {
 
 	v1 := reflect.ValueOf(x)
 	v2 := reflect.ValueOf(y)
-	fmt.Println(v1.Kind(), "/", v1.Type())
-	fmt.Println(v2.Kind(), "/", v2.Type())
+	fmt.Println(" type:", v1.Type(), "kind:", v1.Kind())
+	fmt.Println(" type:", v2.Type(), "kind:", v2.Kind())
+
+	foo := Foo{}
+	v3 := reflect.ValueOf(foo)
+	fmt.Println("type:", v3.Type(), "kind:", v3.Kind())
 }
 
 func rtypeAddrTest() {
@@ -38,12 +49,18 @@ func reflectInfoExtraction() {
 	fmt.Println("value:", v.Float())
 }
 
+func interfaceArg(i interface{}) {
+	val := i.(int)
+	fmt.Println(val)
+	//v := reflect.ValueOf(i)
+	//fmt.Println("type:", reflect.TypeOf(i))
+}
+
 func valueToInterface() {
-	// ???
-	var x float64 = 3.14
+	var x = 3.14
 	var y interface{} = x
 	v := reflect.ValueOf(x)
-	fmt.Println(v, "/", v.Interface())
+	fmt.Println("type:", v.Type(), "kind:", v.Kind())
 	yType := reflect.TypeOf(y)
 	fmt.Println(yType)
 	z := y.(float64)
@@ -57,31 +74,14 @@ func funcToCall(data string) {
 
 func testReflectCall() {
 	v := reflect.ValueOf(funcToCall)
-	args := make([]reflect.Value, 1)
-	args[0] = reflect.ValueOf("test string")
-	// or
-	//args = append(args, reflect.ValueOf("test string"))
+	var args []reflect.Value
+	args = append(args, reflect.ValueOf("test string"))
 	v.Call(args)
 
-	fmt.Println("type:", v.Type())
-	fmt.Println("kind:", v.Kind())
+	fmt.Println("type:", v.Type(), "kind:", v.Kind())
 
 	args = append(args, reflect.ValueOf(42))
 	//v.Call(args) // panic: reflect: Call with too many input arguments
-}
-
-func interfaceArg(i interface{}) {
-	val := i.(int)
-	fmt.Println(val)
-	//v := reflect.ValueOf(i)
-	//fmt.Println("type:", reflect.TypeOf(i))
-}
-
-type Foo struct {
-}
-
-func (f Foo) Boo() {
-	fmt.Println("Hi here!")
 }
 
 func newObject() {
@@ -95,14 +95,14 @@ func newObject() {
 	m.Call(nil)
 }
 
-//func main() {
-//	//rtypeAddrTest()
-//	//reflectInfoExtraction()
-//	//kindVsType()
-//	//valueToInterface()
-//	//testReflectCall()
-//	var x float64 = 3.14
-//	//var y interface{} = x
-//	//z := y.(int)
-//	interfaceArg(x)
-//}
+func main() {
+	//kindVsType()
+	//rtypeAddrTest()
+	//reflectInfoExtraction()
+	//valueToInterface()
+	testReflectCall()
+	//var x float64 = 3.14
+	//var y interface{} = x
+	//z := y.(int)
+	//interfaceArg(x)
+}
