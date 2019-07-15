@@ -62,22 +62,22 @@ func NewBus() Bus {
 	}
 }
 
-//func main() {
-//	b := NewBus()
-//
-//	_ = b.Subscribe("foo", func(str string, num int) {
-//		fmt.Printf("(1) foo(%s, %d)\n", str, num)
-//	})
-//	f2 := func(str string, num int) {
-//		fmt.Printf("(2) foo(%s, %d)\n", str, num)
-//	}
-//	_ = b.Subscribe("foo", f2)
-//	_ = b.Subscribe("boo", func(str string) {
-//		fmt.Printf("(3) foo(%s)\n", str)
-//	})
-//
-//	b.Publish("foo", "string", 42)
-//	_ = b.Unsubscribe("foo", f2)
-//	b.Publish("foo", "string1", 42)
-//	b.Publish("boo", "string2")
-//}
+func main() {
+	b := NewBus()
+
+	_ = b.Subscribe("foo", func(str string, num int) {
+		fmt.Printf("(1) foo(%s, %d)\n", str, num)
+	})
+	f2 := func(str string, num int) {
+		fmt.Printf("(2) foo(%s, %d)\n", str, num)
+	}
+	_ = b.Subscribe("foo", f2)
+	_ = b.Subscribe("boo", func(str string) {
+		fmt.Printf("(3) foo(%s)\n", str)
+	})
+
+	b.Publish("foo", "string", 42)
+	_ = b.Unsubscribe("foo", f2)
+	b.Publish("foo", "string1", 42)
+	b.Publish("boo", "string2")
+}

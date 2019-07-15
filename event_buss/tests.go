@@ -95,14 +95,14 @@ func newObject() {
 	m.Call(nil)
 }
 
-func main() {
-	//kindVsType()
-	//rtypeAddrTest()
-	//reflectInfoExtraction()
-	//valueToInterface()
-	testReflectCall()
-	//var x float64 = 3.14
-	//var y interface{} = x
-	//z := y.(int)
-	//interfaceArg(x)
-}
+//func main() {
+//kindVsType()
+//rtypeAddrTest()
+//reflectInfoExtraction()
+//valueToInterface()
+//testReflectCall()
+//var x float64 = 3.14
+//var y interface{} = x
+//z := y.(int)
+//interfaceArg(x)
+//}

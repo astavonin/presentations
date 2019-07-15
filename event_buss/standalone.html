@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Practical Go reflection</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <style type="text/css">
+        @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+        @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+        @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+        img {
+            max-width: 100%;
+        }
+        body { font-family: 'Droid Serif'; }
+        h1, h2, h3 {
+            font-family: 'Yanone Kaffeesatz';
+            font-weight: normal;
+        }
+        .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+    </style>
+</head>
+<body>
+    <textarea id="source">
+
+class: center, middle
+
+# Practical Go reflection
+
+
+
+July 17, 2019, Alexander Stavonin, a.stavonin@gmail.com
+---
+# What is reflection?
+
+Reflection is the ability of a process to examine, introspect, and modify its own structure and behavior.
+
+--
+
+Typical workflow:
+```go
+f := Foo{}
+f.Hello()
+```
+--
+With reflection:
+```go
+fT := reflect.TypeOf(Foo{}) // <- type
+fV := reflect.New(fT)       // <- value
+
+m := fV.MethodByName("Hello")
+if m.IsValid() {
+    m.Call(nil)
+}
+```
+---
+# Reflection internals
+
+## Types and Kinds
+
+- Type (`reflect.Type`) is the representation of a Go type.
+
+- Kind (`reflect.Kind`) represents the specific kind of type that a Type represents.
+
+- Value (`reflect.Value`) is the reflection interface to a Go value.
+
+```go
+var y int = 43
+
+v2 := reflect.ValueOf(y)
+fmt.Println(" type:", v2.Type(), "kind:", v2.Kind())
+```
+```txt
+type: int kind: int
+```
+---
+# Reflection internals
+
+## Types and Kinds, continue
+
+```go
+type MyInt int
+
+var x MyInt = 42
+
+v1 := reflect.ValueOf(x)
+fmt.Println( " type:", v1.Type(), "kind:", v1.Kind())
+```
+```txt
+type: main.MyInt kind: int
+```
+--
+```go
+foo := Foo{}
+v3 := reflect.ValueOf(foo)
+fmt.Println("type:", v3.Type(), "kind:", v3.Kind())
+```
+```txt
+type: main.Foo kind: struct
+```
+---
+# Reflection internals
+
+## Interfaces
+
+- Interfaces are named collections of method signatures.
+
+```go
+var x = 3.14
+var y interface{} = x
+v := reflect.ValueOf(x)
+fmt.Println("type:", v.Type(), "kind:", v.Kind())
+
+z := y.(float64)
+fmt.Println(z)
+```
+```txt
+type: float64 kind: float64
+3.14
+```
+---
+# Reflection internals
+
+## Function call
+
+```go
+func funcToCall(data string) {
+    fmt.Println("From funcToCall:", data)
+}
+```
+--
+```go
+v := reflect.ValueOf(funcToCall)
+var args []reflect.Value
+args = append(args, reflect.ValueOf("test string"))
+v.Call(args)
+```
+```txt
+From funcToCall: test string
+```
+--
+```go
+fmt.Println("type:", v.Type(), "kind:", v.Kind())
+```
+```txt
+type: func(string) kind: func
+```
+
+---
+# Reflection internals
+
+## errors handling
+
+No type information on compile time
+
+```go
+args = append(args, reflect.ValueOf(42))
+v.Call(args)
+```
+```txt
+panic: reflect: Call with too many input arguments
+```
+--
+With type information on compile time
+```go
+var x = 3.14
+var y interface{} = x
+val := y.(int)
+```
+```txt
+panic: interface conversion: interface {} is float64, not int
+```
+---
+# Reflection internals
+
+## error handling, continue
+
+```go
+func interfaceArg(i interface{})  {
+    val := i.(int)
+    fmt.Println(val)
+}
+
+func main() {
+    var x float64 = 3.14
+    var y interface{} = x
+    z := y.(int)
+    fmt.Println(z)
+}
+```
+
+https://godbolt.org/z/YIjl09
+---
+# Is reflection free?
+
+No, it's impossible by design
+
+https://godbolt.org/z/fwZpq1
+
+---
+# Message bus
+
+![](./event_bus.svg)
+
+---
+# Message bus implementation
+
+## Interfaces
+
+Event Bus interface
+
+```go
+type Bus interface {
+    Subscribe(event string, handler interface{}) error
+    Unsubscribe(event string, handler interface{}) error
+    Publish(event string, args ...interface{})
+}
+```
+--
+
+Event Bus representation
+
+```go
+type EventBus struct {
+    handlers map[string][]reflect.Value
+}
+```
+---
+# Message bus implementation
+
+## Subscribe
+
+```go
+func (b *EventBus) Subscribe(event string, handler interface{}) error {
+    if !(reflect.TypeOf(handler).Kind() == reflect.Func) {
+        return fmt.Errorf("invalid type %s, reflect.Func is expected",
+            reflect.TypeOf(handler).Kind())
+    }
+    b.handlers[event] = append(b.handlers[event], reflect.ValueOf(handler))
+
+    return nil
+}
+```
+---
+# Message bus implementation
+
+## Unsubscribe
+
+```go
+func (b *EventBus) Unsubscribe(event string, handler interface{}) error {
+    if _, ok := b.handlers[event]; !ok {
+        return fmt.Errorf("event %s doesn't exist", event)
+    }
+    idx := b.handlerIdx(event, reflect.ValueOf(handler))
+    b.handlers[event] = append(b.handlers[event][:idx],
+                               b.handlers[event][idx+1:]...)
+    return nil
+}
+```
+---
+# Message bus implementation
+
+## Publish
+
+```go
+func (b *EventBus) Publish(event string, args ...interface{}) {
+    argsVal := make([]reflect.Value, 0)
+    for _, arg := range args {
+        argsVal = append(argsVal, reflect.ValueOf(arg))
+    }
+    if handlers, ok := b.handlers[event]; ok {
+        for _, h := range handlers {
+            h.Call(argsVal)
+        }
+    }
+}
+```
+---
+# Live demo...
+---
+# Questions and comments are welcome! :)
+
+    </textarea>
+    <script src="http://gnab.github.io/remark/downloads/remark-latest.min.js" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS_HTML&delayStartupUntil=configured" type="text/javascript"></script>
+    <script type="text/javascript">
+        var slideshow = remark.create();
+
+        // Setup MathJax
+        MathJax.Hub.Config({
+            tex2jax: {
+                skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+            }
+        });
+
+        MathJax.Hub.Configured();
+    </script>
+</body>
+</html>
