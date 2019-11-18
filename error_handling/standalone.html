@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>All you need to know about error handling</title>
+    <meta charset="utf-8">
+    <style>
+        @import url("style.css");
+    </style>
+</head>
+<body>
+    <textarea id="source">
+
+class: grey-background
+layout: true
+
+---
+class: center, middle
+
+# All you need to know about errors handling
+
+
+.footnote[
+    Alexander Stavonin, *a.stavonin@gmail.com*,
+    <br>
+    GoSG, 20 Nov 2019. 
+]
+
+???
+from one side I love programming langiages. I have production experience with ...
+And one of the first question when I'm looking into new language is: "how to handle error right?"
+You may be surprised, but this is quete complicated question because almost all languages have own, the only right approach.
+This talk is a summary for Go programming language.
+---
+# What is error in Go?
+
+
+- Error is an object which have type `error`, a built-in interface.
+
+```go
+type error interface {
+    Error() string
+}
+```
+
+- By convention, errors are **the last** return value of a function.
+
+```go
+fn boo() (ValueType, error)
+```
+
+- Or the only return value of the function.
+
+```go
+fn foo() error
+```
+
+- Function without error as return value is also valid.
+
+```go
+fn boo() bazz
+```
+
+---
+# Typical error handling approaches
+
+We can virtually devide error handling approaches into 3 large, partially intersecting subsets:
+
+- Error inlining.
+
+- Error constants set.
+
+- Component based approach.
+
+---
+# Error inlining 😒
+
+Most simple and most error prone way.
+
+```go
+func foo(val int) error {
+    if val == 42 {
+        return fmt.Errorf("42 is not allowed")
+    }
+    // normal workflow
+    return nil
+}
+```
+--
+```go
+err := foo(1)
+if err != nil {
+// do some error handling
+}
+// normal workflow
+```
+--
+**ISSUE:** there is no way to deferrentiate between different errors. You wouldn't handle errors based on string comparation, wouldn't you?
+
+---
+# Error constants set 🤔
+
+```go
+var (
+    ErrFortyTwo = fmt.Errorf("42 is not allowed")
+    Err... = fmt.Errorf(...
+    ...
+)
+```
+--
+```go
+func foo(val int) error {
+    if val == 42 {
+        return ErrFortyTwo
+    }
+    // normal workflow
+    return nil
+}
+```
+--
+```go
+err := foo(1)
+if err == ErrFortyTwo {
+    // do some error handling for ErrConstant
+}
+// normal workflow
+```
+--
+**ISSUE:** how to deal with multiple subsystems?
+
+---
+
+# Component based approach 😊
+
+What if you have multy component system and you'd like to have more info?
+
+* Component name/id where error had happened.
+
+* Error code.
+
+* Error description.
+---
+# Component based approach 😊
+## defining data types
+
+```go
+type Component int
+type Code int
+
+//go:generate stringer -type=Component
+//go:generate stringer -type=Code
+const (
+    ErrOne Code = iota
+    ErrTwo
+
+    ComponentOne Component = iota
+    ComponentTwo
+)
+```
+
+---
+# Component based approach 😊
+## defining interfaces
+
+```go
+type CompBaseError interface {
+    error
+    Code() Code
+    Component() Component
+}
+type ErrorDescription struct {
+    component Component
+    code Code
+    message string
+}
+```
+
+---
+# Component based approach 😊
+## implementation
+
+```go
+func (e *ErrorDescription) Error() string {
+    return fmt.Sprintf("%s | %s: %s", e.component, 
+        e.code, e.message)
+}
+
+func (e *ErrorDescription) Code() Code {
+    return e.code
+}
+
+func (e *ErrorDescription) Component() Component {
+    return e.component
+}
+```
+---
+# Component based approach 😊
+## Lets use it!
+```go
+func foo(val int) error {
+    if val == 42 {
+        return &ErrorDescription{ComponentOne, ErrTwo, 
+            "42 is not allowed"}
+    }
+    ...
+...
+err := foo(1)
+if errCmpBase, ok := err.(CompBaseError); 
+    ok && errCmpBase.Component() == ComponentOne 
+       && errCmpBase.Code() == ErrTwo {
+    // do some error handling
+}
+```
+Possible output:
+```txt
+ComponentOne | ErrTwo: 42 is not allowed
+```
+
+---
+# Controlling error handling
+
+Compiler does not generate warnings on ignored error:
+
+```go
+func foo() error {
+    return fmt.Errorf("some error...")
+}
+...
+foo()
+```
+--
+Aways use linters:
+
+```bash
+> errcheck
+main.go:10:5:   foo()
+```
+
+
+Best linters aggregator today is:
+
+- GolangCI-Lint
+
+???
+attibute [[nodiscard]] in C++
+
+---
+
+# Defer, Panic, and Recover
+
+<br>
+
+- The `panic` built-in function stops normal execution of the current goroutine.
+
+```go
+func panic(v interface{})
+```
+
+- The `recover` built-in function allows a program to manage behavior of a panicking goroutine.
+
+```go
+func recover() interface{}
+```
+
+- A `defer` statement defers the execution of a function until the surrounding function returns.
+
+---
+
+# What is panic?
+
+```go
+defer func() {                              // (1)
+    if r := recover(); r != nil {           // (2)
+        fmt.Println("Recovered from panic:", r)
+    }
+}()
+fmt.Println("Calling f.")                   // (3)
+f(0)
+fmt.Println("Returned normally.")           // (4)
+```
+--
+```go
+func f(i int) {
+    defer fmt.Println("Defer in f")         // (5)
+    fmt.Println("Panicking!")
+    panic(fmt.Sprintf("Panic message"))     // (6)
+    fmt.Println("After panic")
+}
+```
+--
+```txt
+Calling f.
+Panicking!
+Defer in f
+Recovered from panic: Panic message
+```
+---
+
+# When to use panic?
+<br>
+- `panic` is **not** an exception from C++/Java/C#.
+
+- The usual way to report an error to a caller is to return an `error` as an extra return value.
+
+- A panic typically means something went unexpectedly wrong. Mostly we use it to fail fast on errors that shouldn’t occur during normal operation, or that we aren’t prepared to handle gracefully.
+
+- You should avoid `panic` in libraries as if the problem can be masked or worked around, it's always better to let things continue to run rather than taking down the whole program.
+
+???
+One of most well known panic example is `http.Handler`
+
+---
+
+# Who use panics?
+
+<br>
+
+`panics` and kLOC for some well known projects:
+
+
+| Project | panics count | LOC | lines per panic |
+|---|---|---|---|
+| Terraform | 1844 | 1136710 | 616 |
+| Etcd | 778 | 521357 | 670 |
+| Kubernetes | 5060 | 3202612 | 630 |
+
+
+Calculated with:
+
+```bash
+grep "panic(" -r --include=*.go . | wc -l
+```
+
+OR
+
+```powershell
+(Get-ChildItem -recurse | 
+    Select-String -pattern "panic\(" -AllMatches).Matches.Count
+```
+---
+
+# New in Go 1.13
+
+```go
+var (
+    ErrPermission = errors.New("permission denied")
+    ...
+)
+```
+--
+## Error wrapping
+
+New `%w` formatting werb for error wrapping.
+
+```go
+if err := checkPermissions(); err != nil {
+    return fmt.Errorf("permission error: %w", err)
+}
+```
+Printed message:
+```
+permission error: permission denied
+```
+???
+If you want to forward original error message with some extra information.
+---
+# New in Go 1.13 
+## errors.Is
+
+Error comparation thru errors chain:
+
+```go
+err := fmt.Errorf("access denied: %w", ErrPermission)
+
+if errors.Is(err, ErrPermission) {
+```
+---
+# New in Go 1.13 
+## errors.As
+
+A way to find the first error in errors chain that matches target
+
+```go
+type PermissionError struct {
+...
+}
+```
+```go
+err := fmt.Errorf("access denied: %w", PermissionError{...})
+
+var permError *PermissionError
+if errors.As(err, permError) {
+    // handling permission error
+}
+
+```
+---
+class: center, middle
+
+    # Questions?
+
+    </textarea>
+    <script src="http://gnab.github.io/remark/downloads/remark-latest.min.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        var slideshow = remark.create();
+
+    </script>
+</body>
+</html>
