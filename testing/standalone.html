@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Testing automation, theory and practice.</title>
+    <meta charset="utf-8">
+    <style>
+        @import url("style.css");
+    </style>
+</head>
+<body>
+    <textarea id="source">
+
+class: grey-background
+layout: true
+
+---
+class: center, middle
+
+# Testing automation, theory and practice.
+
+---
+# Test pyramid
+
+![](./test_pyramid.png)
+
+---
+# Unit testing
+
+* Unit-testing is the main development assistant tool:
+
+    * Coding simplification.
+
+    * Less regression errors.
+
+    * Easy to debug your code.
+
+    * Your colleagues can more easy read and understand your code.
+
+    * Improve system design (always) and architecture (sometimes).
+
+
+.footnote[
+__Do not merge new code while it's not covered by unit tests!__
+
+__To think about system design, architecture AND your colleagues.__
+]
+
+---
+# Unit-testing is simple... with Go
+
+* Unit testing in Go significantly simpler than in C++ because of:
+
+    * Embedded unit-testing toolchain.
+
+    * Packages.
+
+    * Interfaces.
+
+    * And circuit dependency ban.
+
+.footnote[
+__Do not merge new code while it's not covered by unit tests!__
+
+__Unit-testing in Go is very simple.__
+]
+
+---
+# What and how should we test?
+
+* Class/package level behaviour.
+
+* Mock all external dependencies.
+
+* Mock all hardware level API.
+
+* Try to avoid timers and sleeps. If it's impossible, make delays configurable.
+
+.footnote[
+__Do not merge new code while it's not covered by unit tests!__
+
+__Unit-test development is not too big or too time consuming task!__
+]
+
+---
+class: center, middle
+# Lets jump to IDE
+
+---
+# Fuzzing
+
+* One of the most wonderful and often ignored type of tests.
+
+* Very popular across DevSecOps.
+
+* Helps you to cover all tricky parts in your code.
+
+---
+# Fuzzing, how it looks like
+
+You need to write a test function of the form:
+
+```go
+func Fuzz(data []byte) int
+```
+
+Fuzzer do:
+
+* Generate random input.
+
+* Monitor for execution coverage.
+
+* Monitor for crashes/panics.
+
+---
+# Integration testing
+
+![](./multy_tabs.svg)
+
+
+    </textarea>
+    <script src="http://gnab.github.io/remark/downloads/remark-latest.min.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        var slideshow = remark.create();
+
+    </script>
+</body>
+</html>
