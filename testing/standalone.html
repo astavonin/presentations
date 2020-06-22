@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Testing automation, theory and practice.</title>
+    <title>Tests automation, theory and practice.</title>
     <meta charset="utf-8">
     <style>
         @import url("style.css");
@@ -16,7 +16,7 @@ layout: true
 ---
 class: center, middle
 
-# Testing automation, theory and practice.
+# Tests automation, theory and practice.
 
 ---
 # Test pyramid
@@ -24,7 +24,7 @@ class: center, middle
 ![](./test_pyramid.png)
 
 ---
-# Unit testing
+# Unit-testing
 
 * Unit-testing is the main development assistant tool:
 
@@ -32,17 +32,17 @@ class: center, middle
 
     * Less regression errors.
 
-    * Easy to debug your code.
+    * Easy debugging.
 
-    * Your colleagues can more easy read and understand your code.
+    * Reading and understanding your code is much easier for your colleagues.
 
-    * Improve system design (always) and architecture (sometimes).
+    * System design (always) and architecture (sometimes) improvement.
 
 
 .footnote[
 __Do not merge new code while it's not covered by unit tests!__
 
-__To think about system design, architecture AND your colleagues.__
+__Think about system design, architecture AND your colleagues.__
 ]
 
 ---
@@ -50,13 +50,13 @@ __To think about system design, architecture AND your colleagues.__
 
 * Unit testing in Go significantly simpler than in C++ because of:
 
-    * Embedded unit-testing toolchain.
+    * Embedded unit-testing toolchain,
 
-    * Packages.
+    * Packages,
 
-    * Interfaces.
+    * Interfaces, and
 
-    * And circuit dependency ban.
+    * Circuit dependency ban.
 
 .footnote[
 __Do not merge new code while it's not covered by unit tests!__
@@ -73,17 +73,17 @@ __Unit-testing in Go is very simple.__
 
 * Mock all hardware level API.
 
-* Try to avoid timers and sleeps. If it's impossible, make delays configurable.
+* Try to avoid timers and sleeps. If you must use them, make delays configurable.
 
 .footnote[
 __Do not merge new code while it's not covered by unit tests!__
 
-__Unit-test development is not too big or too time consuming task!__
+__Unit-test development is NOT challenging or time consuming task!__
 ]
 
 ---
 class: center, middle
-# Lets jump to IDE
+# Lets jump to IDE!
 
 ---
 # Fuzzing
@@ -95,7 +95,7 @@ class: center, middle
 * Helps you to cover all tricky parts in your code.
 
 ---
-# Fuzzing, how it looks like
+# How fuzzing looks
 
 You need to write a test function of the form:
 
@@ -103,13 +103,13 @@ You need to write a test function of the form:
 func Fuzz(data []byte) int
 ```
 
-Fuzzer do:
+Fuzzer:
 
-* Generate random input.
+* Generates random input.
 
-* Monitor for execution coverage.
+* Monitors execution coverage.
 
-* Monitor for crashes/panics.
+* Monitors crashes/panics.
 
 ---
 # Integration testing
