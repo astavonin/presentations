@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Testing automation, theory and practice.</title>
+    <title>Tests automation, theory and practice.</title>
     <meta charset="utf-8">
     <style>
         @import url("style.css");
@@ -16,7 +16,7 @@ layout: true
 ---
 class: center, middle
 
-# Testing automation, theory and practice.
+# Tests automation, theory and practice.
 
 ---
 # Test pyramid
@@ -24,7 +24,7 @@ class: center, middle
 ![](./test_pyramid.png)
 
 ---
-# Unit testing
+# Unit-testing
 
 * Unit-testing is the main development assistant tool:
 
@@ -32,17 +32,15 @@ class: center, middle
 
     * Less regression errors.
 
-    * Easy to debug your code.
+    * Easy debugging.
 
-    * Your colleagues can more easy read and understand your code.
+    * Reading and understanding your code is much easier for your colleagues.
 
-    * Improve system design (always) and architecture (sometimes).
-
-        * _We will talk about testing techniques that improve architecture a bit later._
+    * System design (always) and architecture (sometimes) improvement.
 
 
 .footnote[
-__To think about system design, architecture AND your colleagues.__
+__Think about system design, architecture AND your colleagues.__
 ]
 
 ---
@@ -50,11 +48,11 @@ __To think about system design, architecture AND your colleagues.__
 
 * Unit testing in Go significantly simpler than in C++ or many other languages because of:
 
-    * Embedded unit-testing toolchain.
+    * Embedded unit-testing toolchain,
 
-    * Packages AND
+    * Packages.
 
-        * Interfaces AND
+    * Interfaces.
 
             * Circuit dependency ban.
 
@@ -75,10 +73,10 @@ You can achieve it with:
 
 * Testing results, but not internal functions calls sequence.
 
-* Avoiding timers and sleeps. If it's impossible, make delays configurable.
+* Try to avoid timers and sleeps. If you must use them, make delays configurable.
 
 .footnote[
-__Unit-test development is not too big or too time consuming task!__
+__Unit-test development is NOT challenging or time consuming task!__
 ]
 
 ---
@@ -151,6 +149,7 @@ mockObj.EXPECT().SomeMethod_1("fourth")
 * Write set before or together with code, but not after.
 
     * improves code design a lot.
+# Lets jump to IDE
 
 ---
 # Fuzzing
@@ -162,7 +161,7 @@ mockObj.EXPECT().SomeMethod_1("fourth")
 * Helps you to cover all tricky parts in your code.
 
 ---
-# Fuzzing, how it looks like
+# How fuzzing looks
 
 You need to write a test function of the form:
 
@@ -170,15 +169,13 @@ You need to write a test function of the form:
 func Fuzz(data []byte) int
 ```
 
-Fuzzer do:
+Fuzzer:
 
-* Generate random input.
+* Generates random input.
 
-* Monitor for execution coverage.
+* Monitors execution coverage.
 
-* Monitor for crashes/panics.
----
-# Small demo
+* Monitors crashes/panics.
 
 ---
 # Integration testing
