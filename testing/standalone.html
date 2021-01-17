@@ -38,52 +38,119 @@ class: center, middle
 
     * Improve system design (always) and architecture (sometimes).
 
+        * _We will talk about testing techniques that improve architecture a bit later._
+
 
 .footnote[
-__Do not merge new code while it's not covered by unit tests!__
-
 __To think about system design, architecture AND your colleagues.__
 ]
 
 ---
 # Unit-testing is simple... with Go
 
-* Unit testing in Go significantly simpler than in C++ because of:
+* Unit testing in Go significantly simpler than in C++ or many other languages because of:
 
     * Embedded unit-testing toolchain.
 
-    * Packages.
+    * Packages AND
 
-    * Interfaces.
+        * Interfaces AND
 
-    * And circuit dependency ban.
+            * Circuit dependency ban.
 
 .footnote[
-__Do not merge new code while it's not covered by unit tests!__
-
 __Unit-testing in Go is very simple.__
 ]
 
 ---
-# What and how should we test?
+# What and how should you test with unit-tests?
 
-* Class/package level behaviour.
+* Tests target is object/package level behavior.
 
-* Mock all external dependencies.
+You can achieve it with:
 
-* Mock all hardware level API.
+* Mocking all external dependencies.
 
-* Try to avoid timers and sleeps. If it's impossible, make delays configurable.
+* Mocking all hardware level API.
+
+* Testing results, but not internal functions calls sequence.
+
+* Avoiding timers and sleeps. If it's impossible, make delays configurable.
 
 .footnote[
-__Do not merge new code while it's not covered by unit tests!__
-
 __Unit-test development is not too big or too time consuming task!__
 ]
 
 ---
-class: center, middle
-# Lets jump to IDE
+# Mocking external dependencies
+
+Lets say we need to read something
+
+```go
+fn foo(SomeType dataSource) {
+    buf := make([]byte, 5)
+    data, err := dataSource.Read(buf)
+    ...
+}
+```
+--
+Using exact type
+```go
+SomeType == File
+```
+--
+Using interface
+```go
+type Reader interface {
+    Read(p []byte) (n int, err error)
+}
+```
+---
+# Test results, but not internal functions calls sequence
+
+The worst unit-test ever
+
+```go
+mockObj.EXPECT().SomeMethod_1("first")
+mockObj.EXPECT().SomeMethod_2("second")
+mockObj.EXPECT().SomeMethod_3("third")
+...
+mockObj.EXPECT().SomeMethod_1("fourth")
+...
+```
+
+## Main issues:
+
+* Function calls sequence testing instead of results testing.
+
+* Hard-coded internal logic expectations.
+
+---
+# Good unit tests do
+
+* Test results but not internal logic.
+
+* Improves design and architecture.
+
+* ???
+
+---
+# Coverage and automation
+
+
+* Cover at least 75% of you code.
+
+    * Applications with many low-level code difficult to cover.
+
+    * 100% tests coverage is achievable, but too expensive.
+
+* Prevent from unit tests coverage degradation.
+
+    * Pipeline automation (Jenkins, TeamCity, Travis CI, etc.) allow to add coverage thresholds.
+
+* Write set before or together with code, but not after.
+
+    * improves code design a lot.
 
 ---
 # Fuzzing
@@ -110,6 +177,8 @@ Fuzzer do:
 * Monitor for execution coverage.
 
 * Monitor for crashes/panics.
+---
+# Small demo
 
 ---
 # Integration testing
