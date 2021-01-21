@@ -26,6 +26,7 @@ li p { line-height: 1.25em; }
 .green { color: #0bcb00; }
 .blue { color: #001bcb; }
 .large { font-size: 2em; }
+
 a, a > code {
     color: rgb(249, 38, 114);
     text-decoration: none;
@@ -62,4 +63,10 @@ table {
 th, td {
     padding: 5px;
     border: 1px solid black;
+}
+
+.center-left {
+    position:          relative;
+    top:               50%;
+    transform:         translateY(50%);
 }

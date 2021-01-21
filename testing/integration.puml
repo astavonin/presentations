@@ -1,0 +1,15 @@
+@startuml
+'https://plantuml.com/component-diagram
+
+[Component A] --> [Component B]
+[Component A] --> [Component D]
+[Component C] --> [Component D]
+[Component C] --> [Component E]
+[Component D] --> [Component E]
+
+database MyPerfectDb {
+}
+
+[Component B] --> MyPerfectDb
+[Component D] --> MyPerfectDb
+@enduml

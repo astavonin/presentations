@@ -18,6 +18,32 @@ class: center, middle
 
 # Tests automation, theory and practice.
 
+.footnote[
+27 Jan 2021, Alexander Stavonin
+
+alex@sysdev.me
+]
+---
+# Speaker Bio
+
+### Key facts:
+
+* 18-years of professional experience as developer, team-lead and architect.
+
+* Domains: distributed computing, security, automotive.
+
+* Languages: C++, Go, Python.
+
+* Meet-ups lover, especially GoSG 😎
+
+* A big fan of big companies.
+
+.footnote[
+![:scale 20%](./motional.jpg)
+![:scale 15%](./autodesk.jpg)
+![:scale 15%](./kaspersky.jpg)
+![:scale 15%](./samsung.jpg)
+]
 ---
 # Test pyramid
 
@@ -26,44 +52,37 @@ class: center, middle
 ---
 # Unit-testing
 
-* Unit-testing is the main development assistant tool:
+### Unit-testing is the main development assistant tool:
 
-    * Coding simplification.
+* Coding simplification.
 
-    * Less regression errors.
+* Less regression errors.
 
-    * Easy debugging.
+* Easy debugging.
 
-    * Reading and understanding your code is much easier for your colleagues.
+* Reading and understanding your code is much easier for your colleagues.
 
-    * System design (always) and architecture (sometimes) improvement.
+* System design (always) and architecture (sometimes) improvement.
 
-
-.footnote[
-__Think about system design, architecture AND your colleagues.__
-]
+    * _We will talk about testing techniques that improve architecture a bit later._
 
 ---
 # Unit-testing is simple... with Go
 
-* Unit testing in Go significantly simpler than in C++ or many other languages because of:
+### Unit testing in Go significantly simpler than in C++ or many other languages because of:
 
-    * Embedded unit-testing toolchain,
+* Embedded unit-testing toolchain.
 
-    * Packages.
+* Packages AND
 
-    * Interfaces.
+    * Interfaces AND
 
-            * Circuit dependency ban.
-
-.footnote[
-__Unit-testing in Go is very simple.__
-]
+        * Circuit dependency ban.
 
 ---
 # What and how should you test with unit-tests?
 
-* Tests target is object/package level behavior.
+### Tests target is object/package level behavior.
 
 You can achieve it with:
 
@@ -75,12 +94,8 @@ You can achieve it with:
 
 * Try to avoid timers and sleeps. If you must use them, make delays configurable.
 
-.footnote[
-__Unit-test development is NOT challenging or time consuming task!__
-]
-
 ---
-# Mocking external dependencies
+# External dependencies mocking
 
 Lets say we need to read something
 
@@ -92,12 +107,12 @@ fn foo(SomeType dataSource) {
 }
 ```
 --
-Using exact type
+Using exact type, hard dependency.
 ```go
 SomeType == File
 ```
 --
-Using interface
+Using interface, soft dependency.
 ```go
 type Reader interface {
     Read(p []byte) (n int, err error)
@@ -117,39 +132,34 @@ mockObj.EXPECT().SomeMethod_1("fourth")
 ...
 ```
 
-## Main issues:
+### Main issues:
 
 * Function calls sequence testing instead of results testing.
 
 * Hard-coded internal logic expectations.
 
 ---
-# Good unit tests do
+# Coverage and automation tips
 
-* Test results but not internal logic.
+### Cover at least 75% of you code.
 
-* Improves design and architecture.
+* Applications with many low-level code could be difficult to cover and lower coverage is fine.
 
-* ???
+* 100% tests coverage is achievable, but too expensive and very demotivating!
 
----
-# Coverage and automation
+--
 
+### Protect unit tests from coverage degradation.
 
-* Cover at least 75% of you code.
+* Pipeline automation (Jenkins, TeamCity, Travis CI, etc.) allow to add coverage thresholds.
 
-    * Applications with many low-level code difficult to cover.
+--
 
-    * 100% tests coverage is achievable, but too expensive.
+### Write tests before or together with code, but not after.
 
-* Prevent from unit tests coverage degradation.
+* improves code design a lot.
 
-    * Pipeline automation (Jenkins, TeamCity, Travis CI, etc.) allow to add coverage thresholds.
-
-* Write set before or together with code, but not after.
-
-    * improves code design a lot.
-# Lets jump to IDE
+* prevents you (or your management) from de-prioritizing test developement tasks.
 
 ---
 # Fuzzing
@@ -160,6 +170,14 @@ mockObj.EXPECT().SomeMethod_1("fourth")
 
 * Helps you to cover all tricky parts in your code.
 
+    * you have ~100% tests coverage at the end for almost free.
+
+* There are two well-known fuzzer implementations today:
+    
+    * `google/gofuzz` 
+
+    * and `dvyukov/go-fuzz`
+
 ---
 # How fuzzing looks
 
@@ -169,7 +187,7 @@ You need to write a test function of the form:
 func Fuzz(data []byte) int
 ```
 
-Fuzzer:
+Fuzzer do:
 
 * Generates random input.
 
@@ -177,17 +195,115 @@ Fuzzer:
 
 * Monitors crashes/panics.
 
+* Generates crash-dumps and crash data.
+
 ---
-# Integration testing
+class: center, middle
 
-![](./multy_tabs.svg)
+# We need fuzzing demo!
 
+---
+# Performance testing
+
+### Easy to develop:
+
+* Just call you critical workflow 
+
+### Main challenges:
+
+* virtualization
+
+* CI/CD support
+    
+    * Some CI/CD supports performance testing, for example GitHub action
+
+    * If you know how to organize with Jenkins, please let me know 😒
+
+---
+# Integration testing. Why?
+
+
+The point of integration testing, is **to test whether many separately developed modules work together as expected**.
+
+© Martin Fowler
+
+--
+
+
+![](./integration.gif)
+
+---
+# Integration testing. What?
+
+#### A simple project structure
+
+* How we will tests it?
+
+* Can integration tests helps us with better architecture?
+
+.center[
+![](http://www.plantuml.com/plantuml/proxy?src=https://raw.githubusercontent.com/astavonin/presentations/master/testing/integration.puml)
+]
+
+---
+# Integration testing. How?
+
+### Complete system simulation.
+
+* **Component** level dependency mocking.
+
+* setting-up and tear-down automation.
+
+
+### Use-case based workflow simulation.
+
+* User actions simulation.
+    
+    * Just code it.
+
+* Traffic/events replaying.
+
+---
+# Integration testing. Tips.
+
+### Integration test are flaky
+
+* Do expect tests will report false positive from time to time. 
+
+--
+
+### Integration tests tool-chain
+
+* Python often is the best option for integration tests development.
+
+* Except it's too slow for you workflow.
+
+--
+
+### Integration tests are expensive
+
+* Would better to have SDETs but not expect your developers will code AND support it.
+
+---
+# Hiring announcement
+
+### Motional has multiple open positions!
+
+.center[
+![:scale 40%](./jobs.svg)
+]
+_Email:_      alexander.stavonin@motional.com
+
+_LinkedIn:_   https://www.linkedin.com/in/astavonin/
 
     </textarea>
     <script src="http://gnab.github.io/remark/downloads/remark-latest.min.js" type="text/javascript"></script>
     <script type="text/javascript">
+        remark.macros.scale = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="width: ' + percentage + '" />';
+        };
         var slideshow = remark.create();
-
     </script>
 </body>
 </html>
