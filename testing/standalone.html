@@ -134,7 +134,7 @@ mockObj.EXPECT().SomeMethod_1("fourth")
 
 ### Main issues:
 
-* Function calls sequence testing instead of results testing.
+* Functions calls sequence testing instead of results testing.
 
 * Hard-coded internal logic expectations.
 
@@ -151,7 +151,7 @@ mockObj.EXPECT().SomeMethod_1("fourth")
 
 ### Protect unit tests from coverage degradation.
 
-* Pipeline automation (Jenkins, TeamCity, Travis CI, etc.) allow to add coverage thresholds.
+* Pipeline automation (Jenkins, TeamCity, Travis CI, etc.) allows to add coverage thresholds.
 
 --
 
@@ -170,7 +170,7 @@ mockObj.EXPECT().SomeMethod_1("fourth")
 
 * Helps you to cover all tricky parts in your code.
 
-    * you have ~100% tests coverage at the end for almost free.
+    * you have ~100% tests coverage in the end almost for free.
 
 * There are two well-known fuzzer implementations today:
     
@@ -187,7 +187,7 @@ You need to write a test function of the form:
 func Fuzz(data []byte) int
 ```
 
-Fuzzer do:
+Fuzzer:
 
 * Generates random input.
 
@@ -207,7 +207,7 @@ class: center, middle
 
 ### Easy to develop:
 
-* Just call you critical workflow 
+* Just call your critical workflow many times
 
 ### Main challenges:
 
@@ -223,7 +223,7 @@ class: center, middle
 # Integration testing. Why?
 
 
-The point of integration testing, is **to test whether many separately developed modules work together as expected**.
+The point of integration testing is **to test whether many separately developed modules work together as expected**.
 
 © Martin Fowler
 
@@ -237,9 +237,9 @@ The point of integration testing, is **to test whether many separately developed
 
 #### A simple project structure
 
-* How we will tests it?
+* How will we tests it?
 
-* Can integration tests helps us with better architecture?
+* Can integration tests help us with better architecture?
 
 .center[
 ![](http://www.plantuml.com/plantuml/proxy?src=https://raw.githubusercontent.com/astavonin/presentations/master/testing/integration.puml)
@@ -252,7 +252,7 @@ The point of integration testing, is **to test whether many separately developed
 
 * **Component** level dependency mocking.
 
-* setting-up and tear-down automation.
+* Setting-up and tear-down automation.
 
 
 ### Use-case based workflow simulation.
@@ -266,7 +266,7 @@ The point of integration testing, is **to test whether many separately developed
 ---
 # Integration testing. Tips.
 
-### Integration test are flaky
+### Integration tests are flaky
 
 * Do expect tests will report false positive from time to time. 
 
@@ -282,7 +282,7 @@ The point of integration testing, is **to test whether many separately developed
 
 ### Integration tests are expensive
 
-* Would better to have SDETs but not expect your developers will code AND support it.
+* Would be better to have SDETs but not expect your developers will code AND support it.
 
 ---
 # Hiring announcement

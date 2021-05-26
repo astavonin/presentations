@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generics are coming!</title>
+    <meta charset="utf-8">
+    <style>
+        @import url("style.css");
+    </style>
+</head>
+<body>
+    <textarea id="source">
+
+class: grey-background
+layout: true
+
+---
+class: center, middle
+
+# Generics are coming!
+
+.footnote[
+27 May 2021, Alexander Stavonin
+
+alex@sysdev.me
+]
+---
+# Speaker Bio
+
+### Key facts:
+
+* 18-years of professional experience as developer, team-lead and architect.
+
+* Domains: distributed computing, security, automotive.
+
+* Languages: C++, Go, Python.
+
+* Meet-ups lover, especially GoSG 😎
+
+* A big fan of big companies.
+
+.footnote[
+![:scale 20%](./motional.jpg)
+![:scale 15%](./autodesk.jpg)
+![:scale 15%](./kaspersky.jpg)
+![:scale 15%](./samsung.jpg)
+]
+
+---
+# Do we need generics?
+
+* all code is "generic" in a dynamically typed world
+
+```python
+def my_min(l, r):
+    return l if l < r else r
+
+my_min(2, 1)
+# > 1
+my_min("foo", "boo")
+# > 'boo'
+```
+???
+* in case of dynamically typed languages any function usually accept any arguments
+    * not valid for Elixir and Erlang, also Python has typing module for static analysis
+* this is nice but not free
+    * type manipulation in runtime requires reflection, which is always slow
+    * type manipulation in runtime is always insecure. It would better to fail on compile-time, but not in production.
+
+--
+
+* almost all static typed languages have generics (C++, Java, C# and so on)
+
+```cpp
+template<typename T>
+const T& min(const T& l, const T& r)
+{
+  if (l < r)
+    return l;
+  return r;
+}
+```
+???
+
+* almost all static typed languages have generics (C++, Java, C# and so on), but there are some downsides like:
+    * meta-programming could be very challenging.
+    * could take a long time to compile.
+
+---
+# Can we create generic code in Go now?
+
+* There are few embedded generic functions in `builtin` like `make`, `append`, `delete`, and so on.
+???
+* but can we create generic code in Go now?
+* even today Go has a few embedded generic functions in `builtin` package like `make`, `append`, `delete`, and so on.
+
+--
+
+* we have can use `interface{}`.
+
+```go
+func min(l interface{}, r interface{}) {
+    // some type checks here
+}
+```
+???
+* but what we can do today for creating some generic code? Lets say we would like to have a `min` function which may work with any type.
+
+* we can use empty interfaces like, which is not a good idea:
+    * we will have same runtime errors as for dynamic typing languages
+    * and this approach is slow because of type checks in run time
+
+--
+
+* we can use a generator.
+
+```go
+//go:generate genny gen out=gen-$GOFILE "Type=string,int"
+func min(l, r Type) {
+    if l < r {
+        return l
+    }
+    return r
+}
+```
+???
+* the second approach is to use generators.
+    * generators are widely used in Go, you can think about Stringers, Protobuf and so on.
+* as a bonus of generators usage you'll have
+    * valid types during compilation
+    * no extra checks at runtime, means your code is faster
+* BUT extra level of complexity, which means you need to know not only Go, but some "genny" dialect in this case, 
+* and it may affect your favorite IDE behavior
+
+
+
+---
+# Generics in Go, general info
+
+```go
+func Print[T any](s []T) {
+    for _, v := range s {
+        fmt.Print(v)
+    }
+}
+```
+
+* Functions can have an additional type parameter list that uses square brackets
+
+* These type parameters can be used by the regular parameters and in the function body
+
+* Each type parameter has a type constraint
+
+* Type constraints are interface types
+
+* The new predeclared name `any` is equal to `interface{}`
+???
+* That was the Go state valid for 1.16, but since 1.17 as experimental feature there are some changes
+* read slide text -->
+* Taking all these into account we can create a generic `Print` function accepting slice `s` of type `T` which could be anything
+
+---
+# Parameter type constraints
+
+Generic functions may **only use operations permitted by the type constraint**
+
+
+```go
+func Join[T any](s []T, sep string) (ret string) {
+    for _, v := range s {
+        ret += v.String()
+        ret += sep
+    }
+    return ret
+}
+```
+???
+* lets have a look bit more complicated example
+* `Join` call should merge a slice of something into a string
+* next code is valid expectations for languages like C++
+* but not for Go as "Generic functions may only use operations permitted by the type constraint"
+* it means that if Stringer interface in undefined, compilation will failed wit message about `v` dot `String` undefined, type bound for `T` has no method `String`
+* You may think, but why generic `Print` function above was working well?
+
+--
+
+The generic `Print` function does not call any `T` methods.
+```go
+func Print[T any](s []T) {
+    for _, v := range s {
+        fmt.Print(v)
+    }
+}
+```
+???
+* generic `Print` do call `fmt.Print` only, which has the next definition
+--
+```go
+func Print(a ...interface{}) (n int, err error) {
+    // ...
+}
+```
+???
+* `fmt.Print` uses empty interface and have reflection calls inside, this is the only reason why this code is valid
+---
+# Satisfying compiler type constraints
+
+To define the new `Stringer` interface.
+
+```go
+type Stringer interface {
+    String() string
+}
+```
+???
+* for satisfying the compiler we should define `String` method as a part of an interface, which is pretty standard for Go
+* and as the next step we should slightly change `Join` definition
+--
+To change generic function definition `any` -> `Stringer`
+
+```go
+func Join[T Stringer](s []T, sep string) (ret string) {
+    for _, v := range s {
+        ret += v.String()
+        ret += sep
+    }
+    return ret
+}
+```
+???
+* `T any` -> `T Stringer`, the rest is the same
+-----
+* all these looks very familiar and you can implement more or less the same with current version of Go and interfaces.
+* but why do we need generics in such the case?
+
+---
+# Pre-generics containers (1/2)
+
+`sync.Map` is a "generic" container which is available since 1.9
+
+```go
+var sm sync.Map
+sm.Store("hello", "world")
+
+result, _ := sm.Load("hello")
+
+fmt.Println(result)
+```
+???
+* today we have `sync.Map`, it is a kind of "generic" container which is available since 1.9
+* you can put any value of any type using a key into it with `Store`
+* and receive it back with `Load`
+* but it's not a generics approach because we use empty interface here for our "magic"
+* even some functions will work as expected, for example `fmt.Println` will print `result` value
+
+--
+`Store`/`Load` "magic"
+
+```go
+func (m *Map) Store(key, value interface{}) {
+    // ...
+}
+func (m *Map) Load(key interface{}) (value interface{}, ok bool) {
+    // ...
+}
+```
+???
+* but we should do all type conversions in runtime have all downsides of this approach
+    * `Store` and `Load` operates with empty interfaces
+---
+# Pre-generics containers (2/2)
+
+The snippet above is valid only because of `Println` reflection "magic".
+
+```go
+func Println(a ...interface{}) (n int, err error) {
+    // ...
+}
+```
+???
+* The snippet above is valid only because of Println reflection "magic", but not because the `sync.Map` is generic container.
+--
+will not compile
+```go
+func MyPrintln(data string) {
+    fmt.Println(data)
+}
+
+result, _ := sm.Load("hello")
+MyPrintln(result)
+```
+
+???
+* for example, next code has compilation error.
+* this is the main reason why Go do not have rich algorithms and/or containers library, while almost all other programming languages have.
+
+---
+# Generic map (1/3)
+
+Types can also have a type parameter list: `type M[T any] []T`
+
+```go
+type Map[K comparable, V any] struct {
+    m map[K]V
+}
+```
+???
+* how generics will help here?
+* lets create a sketch for generic `Map` type
+* types (structs), same as functions, can also have a type parameter list
+* in this case we have type `Map` with two type parameters: `K` with `comparable` constraint and `V` of any type
+* `K` is limited to `comparable` because of Go-embedded `map` expectations
+--
+Each generic type should be instantiated with expected types like `Map[K, V]{...}`
+
+```go
+func NewMap[K comparable, V any]() Map[K, V] {
+    return Map[K, V]{m: make(map[K]V)}
+}
+```
+???
+* Each generic type should be instantiated with expected types like `Map[K, V]{...}` in the return statement
+--
+This is indirect instantiation, and types are forwarding from the upper level where NewMap will be called.
+
+```go
+sm := NewMap[string, string]()
+```
+???
+* This is indirect instantiation, and types are forwarding from the upper level where `NewMap` will be called.
+---
+# Generic map (2/3)
+
+* Generic types can have methods.
+
+* Type of a method must declare the same number of type parameters as in the type's definition.
+
+* Type parameters are declared without any constraint.
+
+```go
+func (m Map[K, V]) Store(key K, val V) {
+    m.m[key] = val
+}
+
+func (m Map[K, V]) Load(key K) (V, bool) {
+    v, ok := m.m[key]
+    return v, ok
+}
+```
+???
+* Generic types can have methods, like `Store` or `Load`.
+
+* Type of a method must declare the same number of type parameters as in the type's definition.
+    * as you see `(m Map[K, V])` declares two type arguments `K` and `V`
+
+* Type parameters are declared without any constraint.
+    * no `comparable` or `any` 
+
+---
+# Generic map (3/3)
+
+The MyPrintln call accepts `string` but **not** `interface{}`
+
+```go
+func MyPrintln(data string) {
+    fmt.Println(data)
+}
+```
+
+and will work as expected
+
+```go
+sm := NewMap[string, string]()
+
+sm.Store("hello", "world")
+
+result, _ := sm.Load("hello")
+
+MyPrintln(result)
+```
+???
+* generic `Map` works with types, but not empty interface and
+* `MyPrintln` from the example will work as expected
+* we can store a value of type `string` into the `Map` and recieve back `string`, but not empty interface
+---
+# Generic algorithms (1/2)
+
+Applying a function to all items in a list with Haskell
+
+```haskell
+map (+7) [2,8,9,3]
+
+-- > [9,15,16,10]
+```
+???
+* the second commons use-case for generics is generic algorithms
+* almost all languages I know have a way to apply a function to a collection... but not Go
+* for example in Haskell applying +7 to list of integers will looks like this
+--
+
+Having generics, we can do the same in Go!
+
+* a generic function should work for slices of any types
+
+```go
+Map([]int{2, 8, 9, 3}, func(val int) int {
+    return val + 7
+})
+
+// > [9 15 16 10]
+
+Map([]float64{2.1, 8.1, 9.1, 3.1}, func(val float64) float64 {
+    return val + 7.
+})
+
+// > [9.1 15.1 16.1 10.1]
+```
+???
+* Having generics, we can do the same in Go!
+* lets think about a generic function `Map` which will work for slices of any types, for example...
+
+---
+# Generic algorithms (2/2)
+
+* function argument type inference `F` for a function call
+
+* which returns `T` type value based on `func(F) T` definition
+
+```go
+func Map[F, T any](s []F, f func(F) T) []T {
+    r := make([]T, len(s))
+    for i, v := range s {
+        r[i] = f(v)
+    }
+    return r
+}
+```
+???
+* for archiving it we need a function with two generic types:
+    * generic function `F` and a type `T`
+    * both of them use `any` type constraint, but based on the declaration you can see that the first argument is a slice and the second is a function
+* keep in mind that you do not need any knowledge of the actual type `T` for creating a new slice `r`, the `make` call
+* the `Map` call will apply the function `f` to all elements of the slice `s` and return a new slice `r`
+
+----
+
+* In the same manner, we can implement a lot of other generic algorithms, and most likely, we will have them as a part of the standard library more or less soon
+
+---
+# Further readings
+
+* ### The `go2go` Playground: https://go2goplay.golang.org/
+
+* ### `dev.go2go` Docker Image: https://github.com/levonet/docker-golang
+
+* ### Type Parameters Proposal: https://go.googlesource.com/proposal/+/refs/heads/master/design/43651-type-parameters.md
+
+???
+* these resources I used while working on the talk.
+---
+class: center, middle
+
+# Q&A
+
+    </textarea>
+    <script src="http://gnab.github.io/remark/downloads/remark-latest.min.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        remark.macros.scale = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="width: ' + percentage + '" />';
+        };
+        var slideshow = remark.create();
+    </script>
+</body>
+</html>
