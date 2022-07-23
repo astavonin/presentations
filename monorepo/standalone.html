@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Why do we need monorepo?</title>
+    <meta charset="utf-8">
+    <style>
+        @import url("style.css");
+    </style>
+</head>
+<body>
+    <textarea id="source">
+
+class: grey-background
+layout: true
+
+---
+class: center, middle
+
+# Why do we need monorepo?
+
+.footnote[
+27 July 2022, Alexander Stavonin
+
+alex@sysdev.me
+]
+---
+# Speaker Bio
+
+### Key facts:
+
+* 18-years of professional experience as developer, team-lead and architect.
+
+* Domains: distributed computing, security, automotive.
+
+* Languages: C++, Go, Python, Elixir.
+
+* Meet-ups lover, especially GoSG 😎
+
+* A big fan of big companies.
+
+.footnote[
+![:scale 20%](./motional.jpg)
+![:scale 15%](./autodesk.jpg)
+![:scale 15%](./kaspersky.jpg)
+![:scale 15%](./samsung.jpg)
+]
+
+---
+# Agenda
+
+* ### A bit of history: version control systems (VCS) and build systems evolution.
+
+* ### Mono & Poly repositories pros and cons.
+
+* ### Go and monorepo.
+
+* ### Conclusion.
+
+---
+# A bit of history
+### Centralized VCS
+
+
+.left-column[
+
+* Single giant repository containing all:
+    * project code, and
+    * third-party libraries, and
+    * sometimes binary data
+
+* Well-known representatives of this family:
+    * Microsoft Visual SourceSafe
+    * Concurrent Versions System
+
+* Download all locally and compile - primitive predecessor of modern monorepo.
+]
+
+.right-column[
+![:scale 100%](./CVCS.png)
+]
+
+---
+# A bit of history
+### Decentralized VCS
+
+
+.left-column[
+
+* Sharing project across multiple repositories.
+
+* Pull-requests-based workflow made sharing changes straightforward and clear.
+
+* Multiple tools for supporting distributed workflow:
+    * Ant, Maven, CMake, and so on.
+]
+
+.right-column[
+![:scale 100%](./DVCS.png)
+]
+
+---
+# Mono & Poly repositories
+
+* Two primary source code management approaches.
+
+* Polyrepos as default approach.
+
+* A lot of mistery around monorepo.
+
+.footnote[
+![](./poly_mono.png)
+]
+
+---
+# Poly repositories
+
+.left-column[
+* Well known and widely used.
+
+* Deviding a project into multiple subprojects.
+
+* Subprojects could represent absolutely anything: a library, executable, microservice, lambda, etc.
+
+* Each subproject has more or less defined boundaries and some level of independence from other subprojects.
+]
+
+.right-column[
+![:scale 100%](./polyrepos_general.png)
+]
+
+---
+# Why polyrepo?
+
+.left-column[
+* It's famous; almost everyone knows how to deal with it.
+
+* There are many well-defined practices.
+
+* CI/CD often supports polyrepo workflow out of the box.
+
+* Enforces developers to define interfaces for interacting between components.
+
+* Each component could be relatively easily written using its language.
+
+* Each component can have its workflow, best practices, and high level of independence.
+]
+
+.right-column[
+![:scale 100%](./polyrepos_ver.png)
+]
+
+---
+# Why NOT polyrepo?
+
+.left-column[
+* Dependencies hell.
+    * Different subprojects has different needs and goals.
+    * No way to enforce or help with updates from outside of a project.
+
+* Shared project refactoring is a huge pain.
+    * No traceable dependencies.
+    * Lack of responsibilities sharing.
+    * No atomic commits.
+
+* Challenging release process and cross teams coordination.
+    * Each polyrepo has its owner with its processes.
+]
+
+.right-column[
+![:scale 100%](./polyrepos_hell.png)
+]
+---
+# Mono repositories
+
+.left-column[
+* All (internal) components has the same version.
+    * `trunk` is the only version for all components.
+
+* Force all developers to focus on the common goal - `trunk`.
+
+* The system either works or not; you can no longer say, "our project works well, but...".
+
+* Atomic commits, you do refactoring in all components at once when it's needed.
+
+* Same build environment for all components.
+    * compiling all dependencies from scratch.
+]
+
+.right-column[
+![:scale 100%](./monorepo.png)
+]
+---
+# Trunk based development
+
+.left-column[
+* all child branches contain only one feature (user story, defect, etc.) and owned by single developer.
+
+* trunk is always "green" and ready for release.
+
+* developers can never merge to trunk until all CI tests succeed.
+    * trunk-based development is heavily dependent on testing automation: unit testing, integration testing, simulations, and so on.
+
+* CI continuously monitors pipeline state and informs developers about failures.
+]
+
+.right-column[
+![:scale 100%](./trunk_based.png)
+]
+---
+# Feature flags
+
+.left-column[
+* A way to turn on/off a part of the functionality in compile, launch, or run time
+    * `build time` - testing or partial inclusion into subsystems.
+    * `launch time` - stable but not fully complete features.
+    * `runtime` - A/B testing, betas, canary launches.
+
+* Allows to merge incomplete functionality into the trunk and avoid feature branches.
+
+* Could be implemented with: compile flags, command line arguments, environment arguments, special request fields, etc.
+]
+
+.right-column[
+![:scale 100%](./feature_flags.png)
+]
+---
+# Build systems
+
+.left-column-wide[
+* Monorepo-style projects add additional requirements to your build system:
+    * _Multi-languages support._ It's not possible to have a dedicated build system for each language.
+    * _Scalability._ Need to compile the whole project at once.
+    * _Incremental builds._ To compile everything from scratch is too expensive, even at scale.
+    * _Caching_. All build artifacts typically stored as distributed cache for compilation speedup.
+    * _Incremental tests._ No need to rerun tests for already tested components.
+    * _Extensibility._ All projects are unique, and the build system should be easily extendable.
+
+* Monorepo-centric build systems:
+    * *Buck* - from Facebook.
+    * *Bazel* - from Google.
+    * *Please* - Go-based build system.
+]
+
+.right-column-narrow[
+![:scale 100%](./buck_bazel.png)
+]
+---
+# Monorepo downsides
+
+.left-column-wide[
+
+* It's very expensive:
+    * High testing infrastructure costs.
+    * Highly qualified and motivated DevOps teams.
+        * Many configuration and infrastructure support work.
+    * Highly qualified and motivated development teams.
+        * One team lose - all lose.
+
+* Monorepo can only survive in highly automated projects:
+    * Manual testing should vanishing, as not scalable approach.
+    * Multy-level automated testing: unit, integration, simulation, load, etc.
+    * High tests coverage is a part of company's culture.
+]
+
+.right-column-narrow[
+![:scale 100%](./flying_cash.png)
+]
+
+---
+# Monorepo downsides
+
+.left-column[
+
+![:scale 80%](./flying_cash.png)
+
+]
+
+.right-column[
+* May not work well for retail software companies with multiple products:
+    * different release cycles
+    * different target KPI
+    * _even so, it is still valuable for a single product._
+
+* Is not friendly to open source development by monolithic nature.
+
+* Standard VCS could fail if your codebase is dramatically huge.
+]
+---
+
+
+# Go and Monorepo
+
+.left-column-wide[
+
+* You can make "fake" monorepo with Go modules, but...
+    * Single language support.
+    * No distributed builds.
+    * No incremental builds.
+
+* Go support is available in:
+    * *Bazel* is well known in the monorepo world, with amazing documentation and active new feature development.
+    * *Buck* is not too famous and could have difficulties with adaptation.
+    * *Please* is very friendly to Go projects but could have difficulties integrating other languages. Less famous than two other competitors.
+]
+
+.right-column-narrow[
+![:scale 100%](./gopher.png)
+]
+---
+# Conclusion
+
+### Core benefits:
+
+* monorepo resolves dependencies hell.
+
+* monorepo decreases time to release readiness from days or months to hours.
+
+* monorepo encourages collaboration and code sharing.
+
+* monorepo simplifies refactoring and indirectly decreases technical debts.
+
+### But:
+
+* you can benefit from monorepo if you have one multi-component project.
+
+* you must be ready to invest a lot in automatization and infrastructure.
+
+* you should have a highly motivated DevOps team.
+
+* all teams shall have a win-together mindset.
+
+---
+class: center, middle
+
+# Q&A
+
+    </textarea>
+    <script src="http://gnab.github.io/remark/downloads/remark-latest.min.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        remark.macros.scale = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="width: ' + percentage + '" />';
+        };
+        var slideshow = remark.create();
+    </script>
+</body>
+</html>
