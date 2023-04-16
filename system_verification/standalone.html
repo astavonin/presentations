@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Distributed Systems: formal modeling and verification</title>
+    <meta charset="utf-8">
+    <style>
+        @import url("style.css");
+    </style>
+</head>
+<body>
+    <textarea id="source">
+
+class: grey-background
+layout: true
+
+---
+class: center, middle
+
+# Distributed Systems: formal modeling and verification
+
+.footnote[
+19 April 2023, Alexander Stavonin
+
+alex@sysdev.me
+]
+---
+# Speaker Bio
+
+### Key facts:
+
+* 20-years of professional experience as developer, team-lead and architect.
+
+* Domains: distributed computing, security, automotive.
+
+* Languages: C++, Go, Python, Elixir.
+
+* Meet-ups lover, especially GoSG 😎
+
+* A big fan of big companies.
+
+.footnote[
+![:scale 20%](./motional.jpg)
+![:scale 15%](./autodesk.jpg)
+![:scale 15%](./kaspersky.jpg)
+![:scale 15%](./samsung.jpg)
+]
+
+---
+# Agenda
+
+* ### What is distributed system and why we may want to verify it?
+
+* ### What do we need for distributed system verification?
+
+* ### Proof as Code.
+
+* ### Making Go implementation more reliable.
+
+* ### Q&A
+
+---
+# Why here, why GoSG?
+
+.left-column-wide[
+
+* Go is one of the most obvious choices for distributed systems development.
+
+* When we create a system, we may want to prove its correctness if needed.
+
+* The presentation covers the beneficial but almost unknown way for distributed system verification.
+]
+
+.right-column-narrow[
+![:scale 100%](./gosg.png)
+]
+---
+# What is distributed system?
+.left-column[
+## Very high-level concept
+
+* Set of ***actors***
+
+* That have independent ***state***
+
+* And interact with each other
+
+* Using some ***protocols***
+
+]
+
+.right-column[
+![:scale 100%](./actors_and_protocols.png)
+]
+
+---
+# What is distributed system?
+.left-column-wide[
+## Actor model.
+### Each actor can:
+
+
+* Send messages to other actors
+
+* Receives messages from different actors
+
+* May modify their own private state
+
+* Can only affect each other indirectly through messaging
+]
+
+.right-column-narrow[
+![:scale 100%](./simple_system.png)
+]
+---
+# What is distributed system?
+.left-column-wide[
+## Protocols.
+
+* ***Actors*** interacts with each other using ***protocols***
+* Protocol is an agreement between parties about:
+    
+    * messages format
+        * each message for prepare/vote/ack/etc has its own structure
+
+    * communication rules
+        * `Prepare` -> `Vote` -> `Action` -> `Ack`
+    
+    * error recovery procedure, and so on.
+        * `Commit` or `Rollback`
+]
+
+.right-column-narrow[
+![:scale 100%](./2pc.png)
+]
+
+---
+# What is distributed system?
+.left-column-wide[
+## State Machines.
+
+* Each actor in a distributed system could be represented as a State Machine.
+
+* Depending on the command sequence, actors can perform transitions between states.
+
+    * cannot `Commit` before voting
+
+    * but can `Abort` immediately when needed
+    
+    * shall `Abort` on global `Abort`
+]
+
+.right-column-narrow[
+![:scale 100%](./2pc_sm.png)
+]
+
+---
+# What is distributed system?
+## Potential issues.
+
+* Fast growing amount of combinations.
+
+    * Combinatorial explosion effect due to combination variations of all system's actors and failure conditions.
+
+* Different network-specific issues increase potential failing conditions.
+
+    * packages losses
+
+    * packages duplicate
+
+    * timeouts
+
+    * changed packages order
+
+* Sooner or later, it'll not be possible to verify system behavior manually.
+
+---
+# Distributed system verification
+## When is formal verification needed?
+
+In all cases, when cross-component misbehavior may put human life in danger or leads to significant money or reputational losses:
+
+* Systems that may create massive damage (nuclear plants, Aerospace, Space).
+
+* Systems that can harm people (Medical, Household).
+
+* Systems that involve money (banking).
+
+* Systems that guarantee data safety and integrity (backups, cloud storage).
+
+---
+# Distributed system verification
+.left-column[
+## How could protocol be proofed?
+
+* Need to prove the validity of a non-deterministic system. 
+
+* It would be possible if there were a way to represent a non-deterministic system as deterministic.
+
+* We need some set of tests that verifies system properties.
+]
+
+.right-column[
+![:scale 100%](./nd2d.png)
+]
+
+---
+# Proof as Code
+
+Distributed systems are notoriously hard to get right (i.e., guaranteeing correctness) as the programmer needs to reason about numerous control paths resulting from the myriad interleaving of events (or messages or failures).
+
+* We do not want to manually validate, as any protocol update requires full revalidation.
+    * The situation is identical to testing automation. It's impossible to do complex modifications without it.
+
+* Find a way to describe a distributed system as a model.
+
+* Create a model.
+
+* Write expectations and validation rules
+
+* Do a validation.
+
+
+---
+# P language is...
+.left-column-wide[
+
+* P is not a generic proposes language.
+
+* but a State Machine based programming language to formally model and specify distributed systems.
+
+* P provides a backend analysis engine to systematically explore behaviors of the system model and check that the model satisfies the desired correctness specifications.
+
+* P includes Code Generator. Only supports C and C# which makes it not too exciting.
+
+* Compiler and validator installation procedure look weird, as you need to install JVM and .NET. P language will use both of them, Java for code parsing and .NET for validation.
+]
+
+.right-column-narrow[
+![:scale 100%](./P.png)
+]
+
+---
+# How P checks correctness
+
+* It looks like P uses C# under the hood because of Coyote.
+
+* Coyote is .NET library and tool designed to help with detecting concurrency bugs.
+
+* Coyote tests one async path at a time exploring all possible paths through the system.
+
+    * non-deterministic system -> deterministic
+
+* It also records this path so that when it finds a bug that bug is 100% reproducible.
+
+---
+# P language toolset
+
+.left-column-wide[
+
+* Protocol description
+
+    * Events
+
+    * States
+
+    * State Machines
+
+* Protocol validation
+    
+    * Monitors
+
+    * Test cases
+
+    * Reliability
+
+* Tests execution
+
+    * Reporets
+
+    * Logs
+]
+
+.right-column-narrow[
+![:scale 100%](./BankCS.png)
+]
+
+---
+# P: Protocol description
+.left-column-narrow[
+
+## Events
+
+* declare (type)
+
+* send
+
+]
+.right-column-wide[
+
+```cpp
+// Declare new type
+type tWithDrawReq = (source: Client, accountId: int, 
+                        amount: int, rId:int);
+// and events
+event eWithDrawReq : tWithDrawReq;
+...
+// Declare enumirations
+enum tWithDrawRespStatus {
+  WITHDRAW_SUCCESS,
+  WITHDRAW_ERROR
+}
+...
+// send events to Actors (`server` in this case)
+send server, eWithDrawReq, (source = this, accountId = accountId, 
+                        amount = WithdrawAmount(), rId = nextReqId);
+```
+
+]
+
+---
+# P: Protocol description
+.left-column-narrow[
+## States
+
+* entry
+
+* exit
+
+* on eventList do func
+
+* on eventList goto stateName
+
+]
+.right-column-wide[
+
+```cpp
+start state Init {
+// state initialization routine
+    entry (input : (serv : BankServer, accountId: int, balance : int))
+    {
+// ... switching state
+      goto WithdrawMoney;
+    }
+}
+// ...
+state WithdrawMoney {
+    entry {
+// ... sending requst to the Server actor
+      send server, eWithDrawReq, (source = this, 
+        accountId = accountId, amount = WithdrawAmount(), 
+        rId = nextReqId);
+    }
+// ... handling Server response
+    on eWithDrawResp do (resp: tWithDrawResp) {
+// ...
+}
+```
+
+]
+
+---
+# P: Protocol description
+.left-column-narrow[
+## State Machines
+
+* vars
+
+* funcs
+
+* states
+
+]
+.right-column-wide[
+
+```cpp
+// State Machine or Actor
+machine Client
+{
+// can include variables as regular class
+  var server : BankServer;
+
+// ... State Machine also host states
+  state WithdrawMoney {
+    entry {
+
+// ... with transition rules
+    on eWithDrawResp do (resp: tWithDrawResp) {
+
+// ... and of cause it can have some functions
+  fun WithdrawAmount() : int {
+    return choose(currentBalance) + 1;
+  }
+// ...
+}
+```
+]
+
+---
+# P: Protocol validation
+.left-column-narrow[
+## Monitors or specifications
+
+* observes
+
+* assert
+
+]
+.right-column-wide[
+
+```cpp
+// Monitors can also define new `event`s
+event eSpec_BankBalanceIsAlwaysCorrect_Init: map[int, int];
+
+// Monitors are also State Machines
+spec BankBalanceIsAlwaysCorrect observes eWithDrawReq,  
+    eWithDrawResp, eSpec_BankBalanceIsAlwaysCorrect_Init {
+// ... which should observe system behavior from outside
+  start state Init {
+    on eSpec_BankBalanceIsAlwaysCorrect_Init 
+            goto WaitForWithDrawReqAndResp 
+            with (balance: map[int, int]){
+      bankBalance = balance;
+    }
+  }
+// ... performing somputations on events
+  state WaitForWithDrawReqAndResp {
+    on eWithDrawReq do (req: tWithDrawReq) {
+// ... and reporting tests on failures
+      assert resp.accountId in bankBalance,
+        format ("Unknown accountId {0} in"
+                "the withdraw response!", resp.accountId);
+
+```
+]
+
+---
+# P: Protocol validation
+.left-column-narrow[
+## Test cases
+
+* test declaration
+
+* monitored specifications
+
+* list of test modules
+]
+.right-column-wide[
+
+```cpp
+// test declaration
+test tcMultipleClients [main=TestWithMultipleClients]:
+// list of monitored specifications
+  assert BankBalanceIsAlwaysCorrect, GuaranteedWithDrawProgress in
+// and specify test modules for the test
+  (union Client, Bank, { TestWithMultipleClients });
+
+// where test is... State Machine!
+machine TestWithMultipleClients
+{
+  start state Init {
+    entry {
+      // which is setting up all data and running the test
+      SetupClientServerSystem(choose(3) + 2);
+// ...
+```
+]
+---
+# P: Reliability
+.left-column-narrow[
+## Test cases
+
+* Sends are reliable, buffered, non-blocking, and directed (not broadcast).
+
+* Sends are reliable i.e., executing a send operation in P adds an event into the target machines buffer. 
+
+]
+.right-column-wide[
+
+```cpp
+fun UnReliableSend(target: machine, message: event, payload: any) {
+  // nondeterministically drop messages
+  // $: choose()
+  if($) send target, message, payload;
+}
+
+// unrelialbe broadcast function
+fun UnReliableBroadCast(ms: set[machine], ev: event, payload: any) {
+  var i: int;
+  while (i < sizeof(ms)) {
+    UnReliableSend(ms[i], ev, payload);
+    i = i + 1;
+  }
+}
+```
+]
+---
+# P: Tests execution
+## Reports
+
+```bash
+> p check -tc tcSingleClientAbstractServer -i 1000
+```
+Shortened output, check ***!!->*** marked lines:
+```txt
+.. Checking /Users/alex/projects/P/Tutorial/1_ClientServer/PGenerated/CSharp/net6.0/ClientServer.dll
+.. Test case :: tcSingleClientAbstractServer
+... Checker is using 'random' strategy (seed:3621022207).
+..... Iteration #1
+!!-> Checker found a bug.
+.........
+... Checking statistics:
+..... Found 1 bug.
+... Scheduling statistics:
+..... Explored 1 schedule: 1 fair and 0 unfair.
+!!-> ..... Found 100.00% buggy schedules.
+..... Number of scheduling points in fair terminating schedules: 17 (min), 17 (avg), 17 (max).
+... Elapsed 0.174654 sec.
+. Done
+[PTool]: Thanks for using P!
+
+```
+---
+# P: Tests execution
+## Logs
+
+```txt
+<DequeueLog> 'BankServer(3)' dequeued event 'eWithDrawReq with payload (<source:Client(4), accountId:0, amount:5, rId:2, >)' in state 'WaitForWithdrawRequests_1'.
+<MonitorLog> BankBalanceIsAlwaysCorrect is processing event 'eWithDrawResp' in state 'WaitForWithDrawReqAndResp'.
+<ErrorLog> Assertion Failed: Bank must accept the withdraw request for 5, bank balance is 15!
+```
+From the `spec`:
+```cpp
+spec BankBalanceIsAlwaysCorrect observes eWithDrawReq,  eWithDrawResp, 
+    eSpec_BankBalanceIsAlwaysCorrect_Init {
+// ...
+    on eWithDrawResp do (resp: tWithDrawResp) {
+// ...
+      if(resp.status == WITHDRAW_SUCCESS) {
+// ...
+      } else {
+!!->    assert bankBalance[resp.accountId] - pendingWithDraws[resp.rId].amount < 10,
+          format ("Bank must accept the withdraw request for {0}, bank balance is {1}!",
+            pendingWithDraws[resp.rId].amount, bankBalance[resp.accountId]);
+// ...
+```
+
+---
+class: center, middle
+
+# Q&A
+
+    </textarea>
+    <script src="http://gnab.github.io/remark/downloads/remark-latest.min.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        remark.macros.scale = function (percentage) {
+          var url = this;
+          return '<img src="' + url + '" style="width: ' + percentage + '" />';
+        };
+        var slideshow = remark.create();
+    </script>
+</body>
+</html>
